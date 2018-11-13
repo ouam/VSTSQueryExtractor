@@ -13,6 +13,16 @@ using Microsoft.VisualStudio.Services.WebApi;
 using System.Net.Http.Headers;
 using System.Net.Http;
 using Newtonsoft.Json;
+using System.Collections;
+using Microsoft.TeamFoundation.Core.WebApi;
+using System.IO;
+
+public class Bug
+{
+    public string ID { get; set; }
+    public string Title { get; set; }
+    public string State { get; set; }
+}
 
 public class ExecuteQuery
 {
@@ -27,7 +37,9 @@ public class ExecuteQuery
     public ExecuteQuery()
     {
         _uri = "https://autologic.visualstudio.com";
-        _personalAccessToken = "yyvcygnult4ag7njpp2updqc6rqmx7h3lanzfpim4ccnceg6js5a";
+        // url link on how to renew token: docs.microsoft.com/en-us/vsts/git/_shared/personal-access-tokens
+        //_personalAccessToken = "yyvcygnult4ag7njpp2updqc6rqmx7h3lanzfpim4ccnceg6js5a";    original token now expired
+        _personalAccessToken = "mta2r46jsdr3k6gtaprhalcofdrzasrt3rxuktfepghkcmmzanya";      //new token. Expires on the 3rd of March 2019
         _project = "Kanban";
     }
 
@@ -46,20 +58,21 @@ public class ExecuteQuery
         //create a wiql object and build our query
         Wiql wiql = new Wiql()
         {
-            //Query all bugs from all projects
-            //Query = "Select [System.Id],[System.Title],[System.State],[System.AreaPath],[AutologicKanban.Projectnamenew],[AutologicKanban.Projectversion],[System.CreatedDate],[AutologicKanban.Defectdetection],[AutologicKanban.Defectorigin],[AutologicKanban.Defectrootcause],[AutologicKanban.Tester] " +
-            //        "From WorkItems " +
-            //        "Where [Work Item Type] = 'Bug' " +
-            //        "Order By [State] Asc, [Changed Date] Desc"
-
-            //Query all active bugs from 1 project (specified above)
-            Query = "Select * " +
+            //Query all bugs from all projects from 01/10/2017 (bug 10187)
+            Query = "Select *" +
                     "From WorkItems " +
                     "Where [Work Item Type] = 'Bug' " +
-                    "And [System.TeamProject] = '" + project + "' " +
-                    "And [System.State] <> 'Closed' " +
-                    "And [System.State] <> 'Backlog' " +
+                    "And [System.Id] > '10186' " +
                     "Order By [State] Asc, [Changed Date] Desc"
+
+            //Query all active bugs from 1 project (specified above)
+            //Query = "Select * " +
+            //        "From WorkItems " +
+            //        "Where [Work Item Type] = 'Bug' " +
+            //        "And [System.TeamProject] = '" + project + "' " +
+            //        "And [System.State] <> 'Closed' " +
+            //        "And [System.State] <> 'Backlog' " +
+            //        "Order By [State] Asc, [Changed Date] Desc"
         };
 
 
@@ -68,7 +81,7 @@ public class ExecuteQuery
         {
             //execute the query to get the list of work items in the results
             WorkItemQueryResult workItemQueryResult = workItemTrackingHttpClient.QueryByWiqlAsync(wiql).Result;
-
+            
             //some error handling                
             if (workItemQueryResult.WorkItems.Count() != 0)
             {
@@ -99,20 +112,22 @@ public class ExecuteQuery
                 int[] arr = list.ToArray();
 
                 //build a list of the fields we want to see
-                string[] fields = new string[5];
-                fields[0] = "System.Id";
-                fields[1] = "System.Title";
-                fields[2] = "System.State";
-                fields[3] = "System.AreaPath";
-                fields[4] = "System.CreatedDate";
-                //fields[5] = "AutologicKanban.ClosedDate";
-                //fields[6] = "AutologicKanban.Projectnamenew";
-                //fields[7] = "AutologicKanban.Projectversion";
-                //fields[8] = "AutologicKanban.Defectdetection";
-                //fields[9] = "AutologicKanban.Defectorigin";
-                //fields[10] = "AutologicKanban.Defectrootcause";
-                //fields[11] = "AutologicKanban.Tester";
-
+                string[] fields = new string[] {
+                    "System.Id",
+                    "System.Title",
+                    "System.State",
+                    "System.Tags",
+                    "System.AreaPath",
+                    "AutologicKanban.Projectnamenew",
+                    "AutologicKanban.Projectversion",
+                    "AutologicKanban.Defectorigin",
+                    "AutologicKanban.Defectdetection",
+                    "AutologicKanban.Defectrootcause",
+                    "AutologicKanban.Testernew",
+                    "AutologicKanban.Developernew",
+                    "System.CreatedDate",
+                    "Microsoft.VSTS.Common.ClosedDate"
+                };
 
                 List<WorkItem> fullWorkItems = new List<WorkItem>();
 
@@ -127,15 +142,46 @@ public class ExecuteQuery
                     fullWorkItems.AddRange(workItems);
                 }
 
+                //Console.WriteLine(String.Join(",", fields));
+
+                //create the overall dictionary of bugs
+                Dictionary<string, Dictionary<string, string>> totalbugs = new Dictionary<string, Dictionary<string, string>>();
+
                 //loop though work items and write to console
                 foreach (var workItem in fullWorkItems)
                 {
-                    Console.WriteLine("{0},{1},{2},{3},{4}", workItem.Id, workItem.Fields["System.Title"], workItem.Fields["System.State"], workItem.Fields["System.AreaPath"], workItem.Fields["System.CreatedDate"]);
-                    //Console.WriteLine("{0},{1},{2},{3},{4},{5}", workItem.Id, workItem.Fields["System.Title"], workItem.Fields["System.State"], workItem.Fields["System.AreaPath"], workItem.Fields["System.CreatedDate"], workItem.Fields["AutologicKanban.ClosedDate"]);
-                    //Console.WriteLine("{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11}", workItem.Id, workItem.Fields["System.Title"], workItem.Fields["System.State"], workItem.Fields["System.AreaPath"], workItem.Fields["System.CreatedDate"], workItem.Fields["AutologicKanban.ClosedDate"], workItem.Fields["AutologicKanban.Projectnamenew"], workItem.Fields["AutologicKanban.Projectversion"], workItem.Fields["AutologicKanban.Defectdetection"], workItem.Fields["AutologicKanban.Defectorigin"], workItem.Fields["AutologicKanban.Defectrootcause"], workItem.Fields["AutologicKanban.Tester"]);
+
+                    Dictionary<string, string> bug = new Dictionary<string, string>();
+
+                    foreach (var field in workItem.Fields)
+                    {
+                        try
+                        {
+                            bug.Add(field.Key.Split('.').Last(), field.Value.ToString());
+                        }
+                        catch
+                        {
+                            Console.WriteLine("Could not add {0} : {1} from work item {2}!", field.Key.Split('.').Last(), field.Value.ToString(), workItem.Id);
+                        }
+                    }
+
+                    //display bug dictionary as json format
+                    //string json_bug = JsonConvert.SerializeObject(bug, Formatting.Indented);
+                    //Console.WriteLine(json_bug);
+
+                    //append bug to dictionary containing all bugs
+                    totalbugs.Add(workItem.Id.ToString(), bug);
                 }
 
-                Console.ReadKey();
+                //archive the existing bugs_data json file before creating the new one
+                string archiveFilename = "bugs_data_" + DateTime.Now.ToString("ddMMyyyy-HHmmss") + ".json";
+                File.Copy(Path.Combine(@"W:\Test_Team\", "bugs_data.json"), Path.Combine(@"W:\Test_Team\", archiveFilename), true);
+
+                //create json file containing all bugs from the query
+                string jsonTotalbugs = JsonConvert.SerializeObject(totalbugs, Formatting.Indented);
+                System.IO.File.WriteAllText(@"W:\Test_Team\bugs_data.json", jsonTotalbugs);
+
+                //Console.ReadKey();
                 return fullWorkItems;
 
             }
