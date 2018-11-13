@@ -39,7 +39,7 @@ public class ExecuteQuery
         _uri = "https://autologic.visualstudio.com";
         // url link on how to renew token: docs.microsoft.com/en-us/vsts/git/_shared/personal-access-tokens
         //_personalAccessToken = "yyvcygnult4ag7njpp2updqc6rqmx7h3lanzfpim4ccnceg6js5a";    original token now expired
-        _personalAccessToken = "mta2r46jsdr3k6gtaprhalcofdrzasrt3rxuktfepghkcmmzanya";      //new token. Expires on the 3rd of March 2019
+        _personalAccessToken = blanked;      //token blanked
         _project = "Kanban";
     }
 
